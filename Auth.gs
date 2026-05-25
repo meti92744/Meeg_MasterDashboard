@@ -5,7 +5,7 @@
 
 // ── CONFIG ─────────────────────────────────────────────────
 var CONFIG = {
-  MASTER_SHEET_ID : 'YOUR_MASTER_SHEET_ID_HERE',  // ← حط هنا الـ ID بتاع الـ Master Sheet
+  MASTER_SHEET_ID : '1_Tg0SNhFcRYy00U5GyUADnRLjoeHp0hOYxEmC3Z6bxI',
   TEAMS_TAB       : 'TEAMS',
   USERS_TAB       : 'USERS',
   PASSWORD_PREFIX : '$M@@g#ME',
@@ -16,25 +16,25 @@ var CONFIG = {
 
 // ── COLUMNS في TEAMS tab (1-based) ─────────────────────────
 var TEAMS_COL = {
-  EMAIL : 1,   // A
-  NAME  : 2,   // B
-  ROOM  : 3,   // C
-  SHIFT : 4,   // D
-  QTC   : 5,   // E
+  EMAIL : 1,
+  NAME  : 2,
+  ROOM  : 3,
+  SHIFT : 4,
+  QTC   : 5,
 };
 
 // ── COLUMNS في USERS tab ───────────────────────────────────
 var USERS_COL = {
-  EMAIL       : 1,   // A
-  NAME        : 2,   // B
-  ROLE        : 3,   // C
-  SHIFT       : 4,   // D
-  ROOM        : 5,   // E
-  QTC         : 6,   // F
-  PASS_HASH   : 7,   // G — SHA-256 hash
-  PASS_PLAIN  : 8,   // H — للمراجعة فقط (ممكن تشيلها بعدين)
-  CREATED_AT  : 9,   // I
-  STATUS      : 10,  // J — Active / Inactive
+  EMAIL       : 1,
+  NAME        : 2,
+  ROLE        : 3,
+  SHIFT       : 4,
+  ROOM        : 5,
+  QTC         : 6,
+  PASS_HASH   : 7,
+  PASS_PLAIN  : 8,
+  CREATED_AT  : 9,
+  STATUS      : 10,
 };
 
 
@@ -50,20 +50,17 @@ function generateUsersFromTeams() {
     return;
   }
 
-  // جيب أو اعمل USERS tab
   var usersTab = ss.getSheetByName(CONFIG.USERS_TAB);
   if (!usersTab) {
     usersTab = ss.insertSheet(CONFIG.USERS_TAB);
     Logger.log('✅ عملت تاب USERS جديدة');
   } else {
-    // امسح القديم غير الـ header
     if (usersTab.getLastRow() > 1) {
       usersTab.getRange(2, 1, usersTab.getLastRow() - 1, usersTab.getLastColumn()).clearContent();
     }
     Logger.log('♻️ هعيد بناء الـ USERS tab');
   }
 
-  // ── Header ──────────────────────────────────────────────
   _writeHeader(usersTab);
   _styleHeader(usersTab);
 
@@ -72,7 +69,7 @@ function generateUsersFromTeams() {
   var now        = new Date();
   var created    = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
 
-  // ── Admin row أول حاجة ──────────────────────────────────
+  // Admin row أول حاجة
   rows.push(_buildUserRow(
     CONFIG.ADMIN_EMAIL,
     CONFIG.ADMIN_NAME,
@@ -84,9 +81,9 @@ function generateUsersFromTeams() {
     created
   ));
 
-  // ── Labeler rows من TEAMS ────────────────────────────────
+  // Labeler rows من TEAMS
   var skipped = 0;
-  for (var i = 1; i < teamsData.length; i++) {   // i=1 عشان نتخطى الـ header
+  for (var i = 1; i < teamsData.length; i++) {
     var row   = teamsData[i];
     var email = String(row[TEAMS_COL.EMAIL - 1]).trim();
     var name  = String(row[TEAMS_COL.NAME  - 1]).trim();
@@ -100,18 +97,13 @@ function generateUsersFromTeams() {
     }
 
     var password = _buildLabelerPassword(email);
-
-    rows.push(_buildUserRow(
-      email, name, 'Labeler', shift, room, qtc, password, created
-    ));
+    rows.push(_buildUserRow(email, name, 'Labeler', shift, room, qtc, password, created));
   }
 
-  // ── اكتب كل الـ rows دفعة واحدة (أسرع) ─────────────────
   if (rows.length > 0) {
     usersTab.getRange(2, 1, rows.length, Object.keys(USERS_COL).length).setValues(rows);
   }
 
-  // ── Style الـ sheet ──────────────────────────────────────
   _styleUsersSheet(usersTab, rows.length);
 
   var msg = '✅ تم بنجاح!\n\n'
@@ -126,22 +118,20 @@ function generateUsersFromTeams() {
 
 // ════════════════════════════════════════════════════════════
 //  2. بناء الباسورد من الإيميل
-//     me409105@meti.ai  →  $M@@g#ME4091  (أول 4 أرقام من الـ ID)
 // ════════════════════════════════════════════════════════════
 function _buildLabelerPassword(email) {
-  // استخرج الـ ID من الإيميل (الجزء بعد "me" وقبل "@")
   var match = email.match(/^me(\d+)@/i);
-  if (!match) return CONFIG.PASSWORD_PREFIX + '0000';   // fallback
-  var digits = match[1].substring(0, 4);               // أول 4 أرقام
+  if (!match) return CONFIG.PASSWORD_PREFIX + '0000';
+  var digits = match[1].substring(0, 4);
   return CONFIG.PASSWORD_PREFIX + digits;
 }
 
 
 // ════════════════════════════════════════════════════════════
-//  3. SHA-256 Hash للباسورد
+//  3. SHA-256 Hash
 // ════════════════════════════════════════════════════════════
 function _hashPassword(plainText) {
-  var bytes  = Utilities.computeDigest(
+  var bytes = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
     plainText,
     Utilities.Charset.UTF_8
@@ -157,14 +147,9 @@ function _hashPassword(plainText) {
 // ════════════════════════════════════════════════════════════
 function _buildUserRow(email, name, role, shift, room, qtc, plainPass, createdAt) {
   return [
-    email,
-    name,
-    role,
-    shift,
-    room,
-    qtc,
-    _hashPassword(plainPass),   // PASS_HASH
-    plainPass,                  // PASS_PLAIN (للمراجعة)
+    email, name, role, shift, room, qtc,
+    _hashPassword(plainPass),
+    plainPass,
     createdAt,
     'Active'
   ];
@@ -172,7 +157,7 @@ function _buildUserRow(email, name, role, shift, room, qtc, plainPass, createdAt
 
 
 // ════════════════════════════════════════════════════════════
-//  5. كتابة الـ Header
+//  5. Header
 // ════════════════════════════════════════════════════════════
 function _writeHeader(sheet) {
   sheet.getRange(1, 1, 1, 10).setValues([[
@@ -181,72 +166,40 @@ function _writeHeader(sheet) {
   ]]);
 }
 
-
-// ════════════════════════════════════════════════════════════
-//  6. تنسيق الـ Header
-// ════════════════════════════════════════════════════════════
 function _styleHeader(sheet) {
-  var hdr = sheet.getRange(1, 1, 1, 10);
-  hdr.setBackground('#1A2B5F')
-     .setFontColor('#2ABFBF')
-     .setFontWeight('bold')
-     .setFontSize(11)
-     .setHorizontalAlignment('center');
+  sheet.getRange(1, 1, 1, 10)
+    .setBackground('#1A2B5F')
+    .setFontColor('#2ABFBF')
+    .setFontWeight('bold')
+    .setFontSize(11)
+    .setHorizontalAlignment('center');
   sheet.setFrozenRows(1);
 }
 
-
-// ════════════════════════════════════════════════════════════
-//  7. تنسيق الـ sheet كاملة
-// ════════════════════════════════════════════════════════════
 function _styleUsersSheet(sheet, dataRows) {
   if (dataRows < 1) return;
-
-  // Admin row — لون مختلف
-  sheet.getRange(2, 1, 1, 10)
-       .setBackground('#2d1515')
-       .setFontColor('#fca5a5');
-
-  // Labeler rows
+  sheet.getRange(2, 1, 1, 10).setBackground('#2d1515').setFontColor('#fca5a5');
   if (dataRows > 1) {
-    sheet.getRange(3, 1, dataRows - 1, 10)
-         .setBackground('#0d1b2e')
-         .setFontColor('#e8edf5');
+    sheet.getRange(3, 1, dataRows - 1, 10).setBackground('#0d1b2e').setFontColor('#e8edf5');
   }
-
-  // Status column — لون حسب القيمة
-  var statusRange = sheet.getRange(2, USERS_COL.STATUS, dataRows, 1);
-  statusRange.setFontWeight('bold');
-
-  // عرض الـ columns
-  sheet.setColumnWidth(1, 220);   // Email
-  sheet.setColumnWidth(2, 160);   // Name
-  sheet.setColumnWidth(3, 140);   // Role
-  sheet.setColumnWidth(4, 150);   // Shift
-  sheet.setColumnWidth(5, 140);   // Room
-  sheet.setColumnWidth(6, 80);    // QTC
-  sheet.setColumnWidth(7, 300);   // Hash
-  sheet.setColumnWidth(8, 160);   // Plain
-  sheet.setColumnWidth(9, 140);   // Created
-  sheet.setColumnWidth(10, 80);   // Status
-
-  // إخفاء عمود الـ Hash (اختياري — الأمان)
-  // sheet.hideColumns(USERS_COL.PASS_HASH);
+  sheet.setColumnWidth(1, 220); sheet.setColumnWidth(2, 160);
+  sheet.setColumnWidth(3, 140); sheet.setColumnWidth(4, 150);
+  sheet.setColumnWidth(5, 140); sheet.setColumnWidth(6, 80);
+  sheet.setColumnWidth(7, 300); sheet.setColumnWidth(8, 160);
+  sheet.setColumnWidth(9, 140); sheet.setColumnWidth(10, 80);
 }
 
 
 // ════════════════════════════════════════════════════════════
-//  8. دالة LOGIN — بتتستخدم من الـ Web App
-//     بترجع user object أو null
+//  6. LOGIN
 // ════════════════════════════════════════════════════════════
 function loginUser(email, plainPassword) {
   try {
     var ss       = SpreadsheetApp.openById(CONFIG.MASTER_SHEET_ID);
     var usersTab = ss.getSheetByName(CONFIG.USERS_TAB);
-
     if (!usersTab) return { success: false, error: 'USERS tab not found' };
 
-    var data     = usersTab.getDataRange().getValues();
+    var data      = usersTab.getDataRange().getValues();
     var inputHash = _hashPassword(plainPassword.trim());
 
     for (var i = 1; i < data.length; i++) {
@@ -262,11 +215,11 @@ function loginUser(email, plainPassword) {
         return {
           success : true,
           email   : rowEmail,
-          name    : row[USERS_COL.NAME  - 1],
-          role    : row[USERS_COL.ROLE  - 1],
-          shift   : row[USERS_COL.SHIFT - 1],
-          room    : row[USERS_COL.ROOM  - 1],
-          qtc     : row[USERS_COL.QTC   - 1],
+          name    : String(row[USERS_COL.NAME  - 1]).trim(),
+          role    : String(row[USERS_COL.ROLE  - 1]).trim(),
+          shift   : String(row[USERS_COL.SHIFT - 1]).trim(),
+          room    : String(row[USERS_COL.ROOM  - 1]).trim(),
+          qtc     : String(row[USERS_COL.QTC   - 1]).trim(),
         };
       }
     }
@@ -280,27 +233,76 @@ function loginUser(email, plainPassword) {
 
 
 // ════════════════════════════════════════════════════════════
-//  9. Web App entry point
+//  7. doPost — entry point كامل
 // ════════════════════════════════════════════════════════════
 function doPost(e) {
-  var params = JSON.parse(e.postData.contents);
-  var action = params.action;
+  try {
+    var params = JSON.parse(e.postData.contents);
+    var action = params.action;
 
-  if (action === 'login') {
-    var result = loginUser(params.email, params.password);
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+    // ── Login — مش محتاج session ──────────────────────────
+    if (action === 'login') {
+      return _json(loginUser(params.email, params.password));
+    }
+
+    // ── كل الـ actions التانية ─────────────────────────────
+    var session = params.session || {};
+
+    switch (action) {
+
+      // Data actions
+      case 'getLabelerData':
+        return _json(getLabelerData(session.email));
+
+      case 'getFloorData':
+        return _json(getFloorSupervisorData(
+          params.room  || session.room  || null,
+          params.shift || session.shift || null,
+          params.date  || null
+        ));
+
+      case 'getWorkloadData':
+        return _json(getWorkloadData(params.date || null));
+
+      case 'getQualityData':
+        return _json(getQualityData());
+
+      // Admin actions
+      case 'admin_getAllUsers':
+        return _json(getAllUsers());
+
+      case 'admin_addUser':
+        return _json(addUserToSheet(params.user));
+
+      case 'admin_editUser':
+        return _json(editUserInSheet(params.email, params.updates));
+
+      case 'admin_deleteUser':
+        return _json(deleteUserFromSheet(params.email));
+
+      case 'admin_toggleStatus':
+        return _json(toggleUserStatus(params.email));
+
+      case 'admin_resetPassword':
+        return _json(resetUserPassword(params.email, params.newPassword));
+
+      default:
+        return _json({ error: 'Unknown action: ' + action });
+    }
+
+  } catch (err) {
+    return _json({ error: err.message });
   }
+}
 
+function _json(obj) {
   return ContentService
-    .createTextOutput(JSON.stringify({ error: 'Unknown action' }))
+    .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doGet(e) {
-  // الـ frontend HTML
-  return HtmlService.createHtmlOutputFromFile('Index')
+  return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('MEEG Operations Dashboard')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
