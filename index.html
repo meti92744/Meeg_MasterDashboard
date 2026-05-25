@@ -13,13 +13,11 @@
 }
 body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
 
-/* ── PARTICLES ── */
 #canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
 .orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
 .orb1{width:350px;height:350px;background:rgba(26,43,95,0.5);top:-100px;right:-80px}
 .orb2{width:220px;height:220px;background:rgba(42,191,191,0.08);bottom:-60px;left:-50px}
 
-/* ── LOGIN CARD ── */
 #login-screen{position:relative;z-index:10;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .card{
   width:380px;
@@ -76,13 +74,11 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans
 .msg.err{background:rgba(220,53,69,.13);border:1px solid rgba(220,53,69,.3);color:#ff8a8a}
 .msg.suc{background:rgba(42,191,191,.1);border:1px solid rgba(42,191,191,.3);color:var(--teal)}
 
-/* ── LOADING ── */
 #loading{display:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px}
 .spinner{width:44px;height:44px;border:3px solid rgba(42,191,191,.15);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-txt{font-size:14px;color:var(--txt2)}
 
-/* ── DASHBOARD FRAME ── */
 #dashboard-frame{display:none;width:100%;min-height:100vh}
 
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
@@ -94,13 +90,11 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans
 <div class="orb orb1"></div>
 <div class="orb orb2"></div>
 
-<!-- LOADING -->
-<div id="loading" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px">
+<div id="loading">
   <div class="spinner"></div>
   <div class="loading-txt" id="loading-txt">Signing in…</div>
 </div>
 
-<!-- LOGIN -->
 <div id="login-screen">
   <div class="card" id="login-card">
     <div class="logo-wrap">
@@ -135,10 +129,12 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans
   </div>
 </div>
 
-<!-- DASHBOARD (يتعبي بعد اللوجين) -->
 <div id="dashboard-frame"></div>
 
 <script>
+// ── Apps Script URL ──────────────────────────────────────
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzeDTJQllg-gKVhWrA-VQSDRX9SQKnDmDEHLXuQ_j6Sq-ANB8HS_oCJrL84i4d3ko0A/exec';
+
 // ── Clock ────────────────────────────────────────────────
 (function clockTick(){
   var el=document.getElementById('clock');
@@ -151,7 +147,7 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans
   t();setInterval(t,1000);
 })();
 
-// ── Particles canvas ────────────────────────────────────
+// ── Particles ────────────────────────────────────────────
 (function particles(){
   var c=document.getElementById('canvas');
   var ctx=c.getContext('2d');
@@ -180,93 +176,109 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans
   draw();
 })();
 
-// ── Toggle password ─────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────
 function togglePass(){
   var inp=document.getElementById('inp-pass');
   inp.type=inp.type==='password'?'text':'password';
 }
-
-// ── Show message ─────────────────────────────────────────
 function showMsg(txt,type){
   var el=document.getElementById('msg');
   el.textContent=txt;el.className='msg '+type;el.style.display='block';
 }
-
-// ── Shake card ──────────────────────────────────────────
 function shakeCard(){
   var c=document.getElementById('login-card');
   c.style.animation='none';c.offsetHeight;c.style.animation='shake .4s ease';
 }
+function showLoading(txt){
+  document.getElementById('loading-txt').textContent=txt||'Loading…';
+  document.getElementById('loading').style.display='flex';
+}
+function hideLoading(){
+  document.getElementById('loading').style.display='none';
+}
 
-// ── MAIN LOGIN ───────────────────────────────────────────
-function doLogin(){
+// ── MAIN LOGIN — fetch بدل google.script.run ─────────────
+async function doLogin(){
   var email = document.getElementById('inp-email').value.trim();
   var pass  = document.getElementById('inp-pass').value;
   var btn   = document.getElementById('login-btn');
 
   if(!email || !pass){ showMsg('Please fill in all fields','err'); return; }
 
-  btn.disabled=true; btn.textContent='Signing in…';
-  document.getElementById('loading').style.display='flex';
+  btn.disabled=true;
+  btn.textContent='Signing in…';
+  showLoading('Signing in…');
 
-  // استدعاء الـ Apps Script backend
-  google.script.run
-    .withSuccessHandler(function(result){
-      document.getElementById('loading').style.display='none';
-      btn.disabled=false; btn.textContent='Sign in →';
+  try {
+    var response = await fetch(APPS_SCRIPT_URL, {
+      method : 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body   : JSON.stringify({ action: 'login', email: email, password: pass })
+    });
 
-      if(result && result.success){
-        // حفظ الـ session
-        window._session = result;
-        showMsg('Welcome back, '+result.name+' 👋','suc');
-        document.getElementById('loading-txt').textContent='Loading your dashboard…';
-        document.getElementById('loading').style.display='flex';
+    var result = await response.json();
 
-        // بعد ثانية، حمّل الـ dashboard المناسب
-        setTimeout(function(){ loadDashboard(result); }, 900);
-      } else {
-        showMsg(result.error || 'Invalid email or password','err');
-        shakeCard();
-        document.getElementById('inp-pass').value='';
-      }
-    })
-    .withFailureHandler(function(err){
-      document.getElementById('loading').style.display='none';
-      btn.disabled=false; btn.textContent='Sign in →';
-      showMsg('Connection error: '+err.message,'err');
+    hideLoading();
+    btn.disabled=false;
+    btn.textContent='Sign in →';
+
+    if(result && result.success){
+      // حفظ الـ session
+      window._session = result;
+      sessionStorage.setItem('meeg_session', JSON.stringify(result));
+
+      showMsg('Welcome back, '+(result.name||result.email)+' 👋','suc');
+      showLoading('Loading your dashboard…');
+
+      setTimeout(function(){ loadDashboard(result); }, 900);
+    } else {
+      hideLoading();
+      showMsg(result.error || 'Invalid email or password','err');
       shakeCard();
-    })
-    .loginUser(email, pass);
+      document.getElementById('inp-pass').value='';
+    }
+
+  } catch(err) {
+    hideLoading();
+    btn.disabled=false;
+    btn.textContent='Sign in →';
+    showMsg('Connection error — please try again','err');
+    shakeCard();
+    console.error('Login error:', err);
+  }
 }
 
-// ── LOAD DASHBOARD حسب الـ role ──────────────────────────
+// ── تحميل الداشبورد بعد اللوجين ─────────────────────────
 function loadDashboard(session){
-  var roleMap = {
-    'Labeler'              : 'Labeler',
-    'Floor Supervisor'     : 'FloorSupervisor',
-    'Shift Supervisor'     : 'ShiftSupervisor',
-    'QA & Training'        : 'QA',
-    'Workload Manager'     : 'WorkloadManager',
-    'Admin'                : 'Admin',
+  // حفظ الـ session وروح لـ dashboard.html
+  sessionStorage.setItem('meeg_session', JSON.stringify(session));
+  hideLoading();
+  window.location.href = 'dashboard.html';
+}
+
+function getRoleView(role){
+  var map={
+    'Labeler':'Labeler',
+    'Floor Supervisor':'FloorSupervisor',
+    'Shift Supervisor':'ShiftSupervisor',
+    'QA & Training':'QA',
+    'Workload Manager':'WorkloadManager',
+    'Admin':'Admin'
   };
-  var view = roleMap[session.role] || 'Labeler';
+  return map[role]||'Labeler';
+}
 
-  google.script.run
-    .withSuccessHandler(function(html){
-      document.getElementById('loading').style.display='none';
-      document.getElementById('login-screen').style.display='none';
-      var frame = document.getElementById('dashboard-frame');
-      frame.style.display='block';
-      frame.innerHTML=html;
-
-      // inject session في الـ dashboard
-      if(window.initDashboard) window.initDashboard(session);
-    })
-    .withFailureHandler(function(err){
-      document.getElementById('loading').style.display='none';
-      showMsg('Failed to load dashboard','err');
-    })
-    .getDashboardHtml(view, session);
+// ── Welcome page مؤقت لحد ما يتعمل الداشبورد الكامل ──────
+function buildWelcomePage(session){
+  return '<div style="min-height:100vh;background:#07101f;color:#e8edf5;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;font-family:Segoe UI,sans-serif">'
+    +'<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#2ABFBF,#1A2B5F);display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(42,191,191,0.4)">'
+    +'<svg width="32" height="32" viewBox="0 0 36 36" fill="none"><path d="M6 10L18 4L30 10L30 26L18 32L6 26Z" stroke="#fff" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="18" cy="18" r="3" fill="#2ABFBF"/></svg>'
+    +'</div>'
+    +'<h1 style="font-size:24px;font-weight:700">Welcome back, '+(session.name||session.email)+'</h1>'
+    +'<p style="color:rgba(232,237,245,0.5);font-size:14px">Role: '+session.role+' &nbsp;|&nbsp; Shift: '+(session.shift||'—')+'</p>'
+    +'<div style="margin-top:8px;padding:12px 24px;background:rgba(42,191,191,0.1);border:1px solid rgba(42,191,191,0.3);border-radius:12px;font-size:13px;color:#2ABFBF">Login successful ✓ — Dashboard views coming soon</div>'
+    +'<button onclick="sessionStorage.clear();location.reload()" style="margin-top:16px;padding:8px 20px;background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:rgba(232,237,245,0.5);cursor:pointer;font-size:13px">Sign out</button>'
+    +'</div>';
 }
 </script>
 </body>
