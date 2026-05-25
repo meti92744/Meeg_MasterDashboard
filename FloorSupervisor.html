@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEEG — Floor Supervisor</title>
+<?= include('Shared') ?>
+<style>
+.page{padding:18px 22px 40px;position:relative;z-index:10}
+.orb1{width:380px;height:380px;background:rgba(26,43,95,0.55);top:-120px;right:-80px}
+.orb2{width:200px;height:200px;background:rgba(42,191,191,0.07);bottom:80px;left:-50px}
+
+/* FILTER BAR */
+.filterbar{display:flex;align-items:center;gap:10px;padding:10px 22px;
+  border-bottom:1px solid var(--brd);background:rgba(9,17,30,0.6);
+  backdrop-filter:blur(12px);position:sticky;top:57px;z-index:40;flex-wrap:wrap}
+.fb-lbl{font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:1.2px}
+.fb-sep{width:1px;height:20px;background:var(--brd);flex-shrink:0}
+.search-wrap{position:relative;margin-left:auto}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4}
+.search-inp{background:var(--glass);border:1px solid var(--brd2);border-radius:20px;
+  padding:5px 14px 5px 30px;font-size:12px;color:var(--txt);outline:none;
+  width:160px;transition:all .25s}
+.search-inp::placeholder{color:var(--txt3)}
+.search-inp:focus{border-color:rgba(42,191,191,0.4);width:200px}
+
+/* STATS STRIP */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  border:1px solid var(--brd);border-radius:14px;overflow:hidden;margin-bottom:18px}
+.sstat{padding:14px 18px;border-right:1px solid var(--brd);position:relative;overflow:hidden}
+.sstat:last-child{border-right:none}
+.sstat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.ss1::after{background:linear-gradient(90deg,transparent,var(--teal),transparent)}
+.ss2::after{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+.ss3::after{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.ss4::after{background:linear-gradient(90deg,transparent,var(--rose),transparent)}
+.sstat-lbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px}
+.sstat-val{font-size:22px;font-weight:800;line-height:1;margin-bottom:2px}
+.sstat-sub{font-size:11px;color:var(--txt2)}
+
+/* SPLIT */
+.split{display:grid;grid-template-columns:280px 1fr;gap:0;border:1px solid var(--brd);
+  border-radius:16px;overflow:hidden;min-height:500px}
+
+/* LEADERBOARD */
+.lb-panel{border-right:1px solid var(--brd);background:rgba(7,14,26,0.5);display:flex;flex-direction:column}
+.lb-hdr{padding:14px 16px 10px;border-bottom:1px solid var(--brd);
+  font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.lb-hdr-title{display:flex;align-items:center;gap:7px}
+.qtc-sel{font-size:11px;background:var(--glass);border:1px solid var(--brd2);
+  border-radius:8px;color:var(--txt2);padding:3px 8px;outline:none;cursor:pointer}
+.qtc-sel option{background:#0d1b30}
+.lb-list{overflow-y:auto;flex:1;padding:8px 10px}
+.lb-list::-webkit-scrollbar{width:3px}
+.lb-item{display:flex;align-items:center;gap:9px;padding:8px;border-radius:11px;
+  cursor:pointer;transition:background .2s;margin-bottom:3px;border:1px solid transparent}
+.lb-item:hover{background:rgba(255,255,255,0.04);border-color:var(--brd)}
+.lb-item.t1{background:rgba(255,209,102,0.07);border-color:rgba(255,209,102,0.2)}
+.lb-item.t2{background:rgba(192,192,192,0.05);border-color:rgba(192,192,192,0.14)}
+.lb-item.t3{background:rgba(205,127,50,0.05);border-color:rgba(205,127,50,0.14)}
+.lb-rank{width:20px;text-align:center;font-size:13px;font-weight:800;flex-shrink:0}
+.r1{color:var(--gold)}.r2{color:#C0C0C0}.r3{color:#CD7F32}.rn{color:var(--txt3);font-size:11px}
+.lb-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-meta{font-size:10px;color:var(--txt3);margin-top:1px}
+.lb-bar{height:2px;border-radius:1px;background:rgba(255,255,255,0.05);margin-top:5px}
+.lb-bar-fill{height:100%;border-radius:1px;transition:width 1s cubic-bezier(.22,1,.36,1)}
+.lb-right{text-align:right;flex-shrink:0}
+.lb-count{font-size:15px;font-weight:800}
+.lb-qual{font-size:10px;color:var(--txt3)}
+.sd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sd-a{background:var(--teal);box-shadow:0 0 5px rgba(42,191,191,0.5);animation:lv 1.4s infinite}
+.sd-b{background:var(--gold)}.sd-x{background:var(--rose)}
+
+/* LABELER GRID */
+.right-panel{display:flex;flex-direction:column;overflow:hidden}
+.rp-hdr{padding:14px 18px 10px;border-bottom:1px solid var(--brd);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.rp-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
+.rp-meta{font-size:11px;color:var(--txt3)}
+.labeler-grid{overflow-y:auto;flex:1;padding:12px;
+  display:grid;grid-template-columns:repeat(2,1fr);gap:8px;align-content:start}
+.labeler-grid::-webkit-scrollbar{width:3px}
+.lcard{background:var(--glass);border:1px solid var(--brd);border-radius:13px;
+  padding:12px 14px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden}
+.lcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .3s}
+.lcard:hover{background:var(--gb);border-color:var(--brd2);transform:translateY(-1px)}
+.lcard:hover::before{opacity:1}
+.lcard.s-active::before{background:linear-gradient(90deg,transparent,var(--teal),transparent)}
+.lcard.s-break::before{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.lcard.s-absent::before{background:linear-gradient(90deg,transparent,var(--rose),transparent)}
+.lc-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.lc-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.lc-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.lc-id{font-size:10px;color:var(--txt3)}
+.lc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px}
+.lcs{text-align:center}
+.lcs-val{font-size:13px;font-weight:700}
+.lcs-lbl{font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px}
+.lc-bar{height:2px;border-radius:1px;background:rgba(255,255,255,0.05);margin-top:8px}
+.lc-bar-fill{height:100%;border-radius:1px;background:linear-gradient(90deg,var(--teal),#5de8e8);
+  transition:width 1s cubic-bezier(.22,1,.36,1)}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div id="nav-placeholder"></div>
+
+<!-- FILTER BAR -->
+<div class="filterbar">
+  <span class="fb-lbl">Shift</span>
+  <div class="chip-group" id="shift-chips">
+    <div class="chip active" data-val="all">All</div>
+    <div class="chip" data-val="Overnight 12H">Overnight 12H</div>
+    <div class="chip" data-val="Night">Night</div>
+    <div class="chip" data-val="Morning">Morning</div>
+  </div>
+  <div class="fb-sep"></div>
+  <span class="fb-lbl">Date</span>
+  <div class="chip-group" id="date-chips">
+    <div class="chip active" data-val="today">Today</div>
+    <div class="chip" data-val="yesterday">Yesterday</div>
+    <div class="chip" data-val="week">This week</div>
+  </div>
+  <div class="fb-sep"></div>
+  <span class="fb-lbl">QTC</span>
+  <div class="chip-group" id="qtc-chips">
+    <div class="chip active" data-val="all">All</div>
+    <div class="chip" data-val="QTC-1">QTC-1</div>
+    <div class="chip" data-val="QTC-2">QTC-2</div>
+    <div class="chip" data-val="QTC-3">QTC-3</div>
+  </div>
+  <div class="search-wrap">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-inp" id="search-inp" placeholder="Search labeler…" oninput="filterLabelers()">
+  </div>
+</div>
+
+<div class="page">
+  <!-- STATS -->
+  <div class="stats-strip" id="stats-strip">
+    <div class="sstat ss1"><div class="sstat-lbl">Total tasks</div><div class="sstat-val" style="color:var(--teal)" id="sv-tasks">—</div><div class="sstat-sub" id="ss-tasks">loading…</div></div>
+    <div class="sstat ss2"><div class="sstat-lbl">Active labelers</div><div class="sstat-val" style="color:var(--purple)" id="sv-active">—</div><div class="sstat-sub" id="ss-active">—</div></div>
+    <div class="sstat ss3"><div class="sstat-lbl">Avg quality</div><div class="sstat-val" style="color:var(--gold)" id="sv-qual">—</div><div class="sstat-sub">room average</div></div>
+    <div class="sstat ss4"><div class="sstat-lbl">Avg hours</div><div class="sstat-val" style="color:var(--rose)" id="sv-hrs">—</div><div class="sstat-sub">of 12h shift</div></div>
+  </div>
+
+  <!-- SPLIT -->
+  <div class="split">
+    <!-- LEADERBOARD -->
+    <div class="lb-panel">
+      <div class="lb-hdr">
+        <div class="lb-hdr-title">🏆 Top performers</div>
+        <select class="qtc-sel" id="lb-qtc-sel" onchange="renderLB()">
+          <option value="all">All QTCs</option>
+          <option value="QTC-1">QTC-1</option>
+          <option value="QTC-2">QTC-2</option>
+          <option value="QTC-3">QTC-3</option>
+        </select>
+      </div>
+      <div class="lb-list" id="lb-list">
+        <div class="loading-state"><div class="spinner"></div></div>
+      </div>
+    </div>
+    <!-- GRID -->
+    <div class="right-panel">
+      <div class="rp-hdr">
+        <div class="rp-title">👥 <span id="room-title">Room</span></div>
+        <div class="rp-meta" id="grid-meta">loading…</div>
+      </div>
+      <div class="labeler-grid" id="labeler-grid">
+        <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var _data = null;
+var AVCOLORS=[['rgba(42,191,191,0.2)','#2ABFBF'],['rgba(123,111,212,0.2)','#a89ef0'],
+  ['rgba(255,107,157,0.2)','#FF6B9D'],['rgba(240,153,74,0.2)','#F0994A'],
+  ['rgba(93,200,168,0.2)','#5DC8A8'],['rgba(255,209,102,0.2)','#FFD166']];
+function avc(n,i){var c=AVCOLORS[i%AVCOLORS.length];return{bg:c[0],cl:c[1],ini:n.split(' ').map(function(w){return w[0]}).join('').slice(0,2).toUpperCase()}}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('room-title').textContent = SESSION.room || 'Room';
+  loadData();
+  // chip groups
+  ['shift-chips','date-chips','qtc-chips'].forEach(function(id){
+    var g=document.getElementById(id);
+    g.querySelectorAll('.chip').forEach(function(c){
+      c.addEventListener('click',function(){
+        g.querySelectorAll('.chip').forEach(function(x){x.classList.remove('active')});
+        this.classList.add('active');
+        loadData();
+      });
+    });
+  });
+  setInterval(loadData, 30000);
+});
+
+function loadData() {
+  var shift = document.querySelector('#shift-chips .chip.active').dataset.val;
+  var room  = SESSION.role === 'Admin' ? 'all' : SESSION.room;
+  callBackend('getFloorData', { shift: shift === 'all' ? '' : shift, room: room, date: _todayStr() }, function(res) {
+    if (!res) return;
+    _data = res;
+    renderStats(res);
+    renderLB();
+    renderGrid();
+  });
+}
+
+function renderStats(d) {
+  document.getElementById('sv-tasks').textContent  = (d.totalTasks||0).toLocaleString();
+  document.getElementById('ss-tasks').textContent  = (SESSION.room||'room') + ' · today';
+  var active = d.leaderboard ? d.leaderboard.filter(function(l){return l.status==='active'}).length : 0;
+  document.getElementById('sv-active').textContent = active + ' / ' + (d.teamSize||0);
+  document.getElementById('ss-active').textContent = 'present today';
+  var quals = d.qualityMap ? Object.values(d.qualityMap).filter(function(v){return v>0}) : [];
+  var avgQ  = quals.length ? (quals.reduce(function(a,b){return a+parseFloat(b)},0)/quals.length).toFixed(1) : '—';
+  document.getElementById('sv-qual').textContent = avgQ + (avgQ!=='—'?'%':'');
+  document.getElementById('sv-hrs').textContent  = d.avgHours ? d.avgHours + 'h' : '—';
+}
+
+function renderLB() {
+  if (!_data || !_data.leaderboard) return;
+  var qtcF = document.getElementById('lb-qtc-sel').value;
+  var list = _data.leaderboard.filter(function(l){ return qtcF==='all'||l.qtc===qtcF; }).slice(0,15);
+  var maxT = list.length ? list[0].count : 1;
+  var html = list.map(function(l, i) {
+    var a = avc(l.name||l.email, i);
+    var rc = i===0?'t1':i===1?'t2':i===2?'t3':'';
+    var rk = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+    var rkc= i===0?'r1':i===1?'r2':i===2?'r3':'rn';
+    var pct= Math.round((l.count/maxT)*100);
+    var qual= _data.qualityMap ? (_data.qualityMap[l.email]||0) : 0;
+    return '<div class="lb-item '+rc+'">'
+      +'<div class="lb-rank '+rkc+'">'+rk+'</div>'
+      +'<div class="lb-av" style="background:'+a.bg+';color:'+a.cl+'">'+a.ini+'</div>'
+      +'<div class="lb-info"><div class="lb-name">'+l.name+'</div>'
+      +'<div class="lb-meta">'+(l.qtc||'')+'</div>'
+      +'<div class="lb-bar"><div class="lb-bar-fill" style="width:0%;background:'+a.cl+'" data-w="'+pct+'"></div></div></div>'
+      +'<div class="lb-right"><div class="lb-count">'+l.count+'</div>'
+      +'<div class="lb-qual">'+(qual?qual+'%':'')+'</div></div>'
+      +'<div class="sd sd-a"></div></div>';
+  }).join('');
+  document.getElementById('lb-list').innerHTML = html || '<div style="padding:20px;color:var(--txt3);text-align:center;font-size:12px">No data</div>';
+  setTimeout(function(){ document.querySelectorAll('.lb-bar-fill').forEach(function(b){b.style.width=b.dataset.w+'%'}); }, 80);
+}
+
+function renderGrid(filter) {
+  if (!_data || !_data.leaderboard) return;
+  var q   = (filter||document.getElementById('search-inp').value||'').toLowerCase();
+  var qtcF= document.querySelector('#qtc-chips .chip.active').dataset.val;
+  var list= _data.leaderboard.filter(function(l){
+    var ms = !q || (l.name||'').toLowerCase().includes(q) || (l.email||'').toLowerCase().includes(q);
+    var mq = qtcF==='all' || l.qtc===qtcF;
+    return ms&&mq;
+  });
+  document.getElementById('grid-meta').textContent = list.length + ' labelers';
+  var maxT = _data.leaderboard.length ? _data.leaderboard[0].count : 1;
+  var html = list.map(function(l, i) {
+    var a    = avc(l.name||l.email, i);
+    var qual = _data.qualityMap ? (_data.qualityMap[l.email]||0) : 0;
+    var hrs  = l.hours || 0;
+    var pct  = Math.round((l.count/maxT)*100);
+    var st   = l.status||'active';
+    var sdCls= st==='active'?'sd-a':st==='break'?'sd-b':'sd-x';
+    return '<div class="lcard s-'+st+'">'
+      +'<div class="lc-top"><div class="lc-av" style="background:'+a.bg+';color:'+a.cl+'">'+a.ini+'</div>'
+      +'<div style="flex:1;min-width:0"><div class="lc-name">'+l.name+'</div><div class="lc-id">'+(l.qtc||'')+'</div></div>'
+      +'<div class="sd '+sdCls+'"></div></div>'
+      +'<div class="lc-stats">'
+      +'<div class="lcs"><div class="lcs-val">'+l.count+'</div><div class="lcs-lbl">Tasks</div></div>'
+      +'<div class="lcs"><div class="lcs-val" style="color:var(--gold)">'+(qual?qual+'%':'—')+'</div><div class="lcs-lbl">Quality</div></div>'
+      +'<div class="lcs"><div class="lcs-val" style="color:var(--purple)">'+(hrs?hrs+'h':'—')+'</div><div class="lcs-lbl">Hours</div></div>'
+      +'</div><div class="lc-bar"><div class="lc-bar-fill" style="width:0%" data-w="'+pct+'"></div></div></div>';
+  }).join('');
+  document.getElementById('labeler-grid').innerHTML = html || '<div style="padding:20px;color:var(--txt3);font-size:12px">No labelers found</div>';
+  setTimeout(function(){ document.querySelectorAll('.lc-bar-fill').forEach(function(b){b.style.width=b.dataset.w+'%'}); }, 100);
+}
+
+function filterLabelers() { renderGrid(document.getElementById('search-inp').value); }
+function _todayStr(){ var n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
+</script>
+</body>
+</html>

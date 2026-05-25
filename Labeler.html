@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEEG — My Dashboard</title>
+<?= include('Shared') ?>
+<style>
+.page{max-width:960px;margin:0 auto;padding:20px 20px 40px;position:relative;z-index:10}
+.orb1{width:360px;height:360px;background:rgba(26,43,95,0.5);top:-100px;right:-80px}
+.orb2{width:200px;height:200px;background:rgba(42,191,191,0.07);bottom:100px;left:-50px}
+
+/* WELCOME */
+.welcome{background:linear-gradient(120deg,rgba(26,43,95,0.8),rgba(13,26,48,0.5));
+  border:1px solid rgba(42,191,191,0.2);border-radius:18px;padding:18px 22px;
+  margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;
+  backdrop-filter:blur(10px)}
+.welcome-left h2{font-size:20px;font-weight:700;margin-bottom:2px}
+.welcome-left h2 span{color:var(--teal)}
+.welcome-left p{font-size:12px;color:var(--txt2)}
+.att-badge{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:50px;font-size:12px;font-weight:600}
+.att-badge.present{background:rgba(42,191,191,0.13);border:1px solid rgba(42,191,191,0.3);color:var(--teal)}
+.att-badge.absent{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5}
+.att-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:lv 1.4s infinite}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.scard{background:var(--glass);border:1px solid var(--brd);border-radius:16px;
+  padding:18px 20px;backdrop-filter:blur(10px);position:relative;overflow:hidden;
+  transition:transform .2s,border-color .2s}
+.scard:hover{transform:translateY(-2px);border-color:var(--brd2)}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--teal),transparent);opacity:0;transition:opacity .3s}
+.scard:hover::before{opacity:1}
+.sc-lbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.sc-val{font-size:30px;font-weight:800;line-height:1;margin-bottom:3px}
+.sc-sub{font-size:11px;color:var(--txt2)}
+.sc-bar{height:3px;border-radius:2px;background:rgba(255,255,255,0.06);margin-top:10px}
+.sc-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--teal),#5de8e8);
+  transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+
+/* TIMELINE */
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
+.section-badge{font-size:11px;color:var(--txt2);background:var(--glass);
+  border:1px solid var(--brd);border-radius:20px;padding:3px 11px}
+.tl-card{background:var(--glass);border:1px solid var(--brd);border-radius:18px;
+  padding:18px;backdrop-filter:blur(10px);margin-bottom:16px}
+.tl-bars{display:flex;align-items:flex-end;gap:0;height:80px;margin-bottom:10px;position:relative}
+.tl-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tl-bar-wrap{width:100%;display:flex;justify-content:center;align-items:flex-end;height:62px}
+.tl-bar{width:calc(100% - 4px);border-radius:5px 5px 0 0;cursor:pointer;
+  transition:height 1s cubic-bezier(.22,1,.36,1),filter .2s}
+.tl-bar:hover{filter:brightness(1.3)}
+.tl-bar.active{background:linear-gradient(180deg,var(--teal),#0d8080);box-shadow:0 0 8px rgba(42,191,191,0.4)}
+.tl-bar.worked{background:rgba(42,191,191,0.28)}
+.tl-bar.break{background:rgba(255,209,102,0.3)}
+.tl-bar.future{background:rgba(255,255,255,0.05)}
+.tl-hr{font-size:9px;color:var(--txt3)}
+.tl-now{position:absolute;top:0;bottom:16px;width:2px;background:var(--teal);border-radius:1px;
+  box-shadow:0 0 8px rgba(42,191,191,0.6)}
+.tl-now-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);position:absolute;top:-4px;left:-3px}
+.tl-legend{display:flex;gap:14px;flex-wrap:wrap}
+.tl-leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2)}
+.tl-leg-dot{width:10px;height:10px;border-radius:3px}
+
+/* TASK BREAKDOWN */
+.tasks-card{background:var(--glass);border:1px solid var(--brd);border-radius:16px;padding:18px;margin-bottom:16px}
+.task-row{display:flex;align-items:center;justify-content:space-between;
+  padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.task-row:last-child{border-bottom:none}
+.task-left{display:flex;align-items:center;gap:10px}
+.task-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.task-name{font-size:13px;color:var(--txt)}
+.task-queue{font-size:10px;color:var(--txt3);margin-top:1px}
+.task-count{font-size:20px;font-weight:700}
+.task-mini{height:3px;border-radius:2px;width:60px;margin-top:4px;margin-left:auto}
+
+/* QUALITY RING */
+.quality-card{background:var(--glass);border:1px solid var(--brd);border-radius:16px;
+  padding:18px;display:flex;align-items:center;gap:22px}
+.q-ring-wrap{position:relative;width:80px;height:80px;flex-shrink:0}
+.q-ring-wrap svg{width:80px;height:80px;transform:rotate(-90deg)}
+.q-bg{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:8}
+.q-fill{fill:none;stroke:var(--teal);stroke-width:8;stroke-linecap:round;
+  stroke-dasharray:213;stroke-dashoffset:213;transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1)}
+.q-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.q-pct{font-size:16px;font-weight:800}
+.q-lbl{font-size:9px;color:var(--txt3);letter-spacing:.5px}
+.q-info h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.q-info p{font-size:12px;color:var(--txt2);line-height:1.6}
+.q-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-top:6px;
+  background:rgba(42,191,191,0.13);color:var(--teal);border:1px solid rgba(42,191,191,0.25)}
+
+/* tooltip */
+.tip{position:fixed;background:rgba(7,16,31,0.97);border:1px solid var(--brd2);
+  border-radius:8px;padding:6px 10px;font-size:11px;pointer-events:none;
+  display:none;z-index:999;backdrop-filter:blur(10px)}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div id="nav-placeholder"></div>
+<div class="tip" id="tip"></div>
+
+<div class="page">
+
+  <!-- WELCOME -->
+  <div class="welcome" id="welcome-banner">
+    <div class="welcome-left">
+      <h2>Welcome back, <span id="user-name">—</span> 👋</h2>
+      <p id="user-meta">Loading…</p>
+    </div>
+    <div class="att-badge present" id="att-badge">
+      <div class="att-dot"></div>
+      <span id="att-lbl">Checking…</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="scard">
+      <div class="sc-lbl">Hours today</div>
+      <div class="sc-val" style="color:var(--teal)" id="sv-hours">—</div>
+      <div class="sc-sub" id="ss-hours">of 12h shift</div>
+      <div class="sc-bar"><div class="sc-bar-fill" id="sb-hours" style="width:0%"></div></div>
+    </div>
+    <div class="scard">
+      <div class="sc-lbl">Tasks submitted</div>
+      <div class="sc-val" id="sv-tasks">—</div>
+      <div class="sc-sub" id="ss-tasks">today</div>
+      <div class="sc-bar"><div class="sc-bar-fill" id="sb-tasks" style="width:0%"></div></div>
+    </div>
+    <div class="scard">
+      <div class="sc-lbl">Quality score</div>
+      <div class="sc-val" style="color:var(--teal)" id="sv-qual">—</div>
+      <div class="sc-sub" id="ss-qual">this week</div>
+      <div class="sc-bar"><div class="sc-bar-fill" id="sb-qual" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="section-hdr">
+    <div class="section-title">⏱ Shift timeline</div>
+    <div class="section-badge" id="shift-badge">—</div>
+  </div>
+  <div class="tl-card">
+    <div class="tl-bars" id="tl-bars"></div>
+    <div class="tl-legend">
+      <div class="tl-leg"><div class="tl-leg-dot" style="background:var(--teal)"></div>Now</div>
+      <div class="tl-leg"><div class="tl-leg-dot" style="background:rgba(42,191,191,0.28)"></div>Worked</div>
+      <div class="tl-leg"><div class="tl-leg-dot" style="background:rgba(255,209,102,0.3)"></div>Break</div>
+      <div class="tl-leg"><div class="tl-leg-dot" style="background:rgba(255,255,255,0.05)"></div>Upcoming</div>
+    </div>
+  </div>
+
+  <!-- TASK BREAKDOWN -->
+  <div class="section-hdr">
+    <div class="section-title">✅ Task breakdown</div>
+    <div class="section-badge">today</div>
+  </div>
+  <div class="tasks-card" id="tasks-card">
+    <div class="loading-state"><div class="spinner"></div><span>Loading tasks…</span></div>
+  </div>
+
+  <!-- QUALITY -->
+  <div class="section-hdr" style="margin-top:16px">
+    <div class="section-title">⭐ Quality score</div>
+    <div class="section-badge">this week</div>
+  </div>
+  <div class="quality-card" id="quality-card">
+    <div class="loading-state"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // ── إعداد الـ session ──────────────────────────────────
+  document.getElementById('user-name').textContent = SESSION.name || '—';
+  document.getElementById('user-meta').textContent =
+    (SESSION.shift||'') + ' · ' + (SESSION.room||'') + ' · ' + new Date().toDateString();
+  document.getElementById('shift-badge').textContent =
+    (SESSION.shift||'') + ' · ' + (SESSION.room||'');
+
+  // ── جيب البيانات من الـ backend ───────────────────────
+  callBackend('getLabelerData', {}, function(res) {
+    if (!res || !res.success) {
+      showToast('Failed to load data', 'err'); return;
+    }
+    renderStats(res);
+    renderTimeline(res);
+    renderTasks(res);
+    renderQuality(res);
+  });
+});
+
+// ── STATS ────────────────────────────────────────────────
+function renderStats(data) {
+  var hours  = data.hoursToday  || 0;
+  var tasks  = data.totalTasksToday || 0;
+  var qual   = data.latestQuality ? parseFloat(data.latestQuality['Accuracy']||data.latestQuality['Score']||0) : 0;
+  var avgTasks = data.avgTasksPerDay || 200;
+
+  document.getElementById('sv-hours').textContent = hours + 'h';
+  document.getElementById('ss-hours').textContent = 'of 12h shift';
+  document.getElementById('sv-tasks').textContent = tasks;
+  document.getElementById('ss-tasks').textContent = 'today · avg ' + avgTasks;
+  document.getElementById('sv-qual').textContent  = qual ? qual + '%' : '—';
+  document.getElementById('ss-qual').textContent  = 'accuracy score';
+
+  setTimeout(function() {
+    document.getElementById('sb-hours').style.width = Math.min((hours/12)*100, 100) + '%';
+    document.getElementById('sb-tasks').style.width = Math.min((tasks/Math.max(avgTasks,1))*100, 100) + '%';
+    document.getElementById('sb-qual').style.width  = qual + '%';
+  }, 120);
+
+  // Attendance
+  var att     = data.atot && data.atot.length > 0;
+  var attBadge= document.getElementById('att-badge');
+  var attLbl  = document.getElementById('att-lbl');
+  if (att) {
+    attBadge.className = 'att-badge present';
+    attLbl.textContent = 'Checked in';
+  } else {
+    attBadge.className = 'att-badge absent';
+    attBadge.querySelector('.att-dot').style.background='#fca5a5';
+    attBadge.querySelector('.att-dot').style.boxShadow='none';
+    attLbl.textContent = 'Not checked in';
+  }
+}
+
+// ── TIMELINE ─────────────────────────────────────────────
+function renderTimeline(data) {
+  var hourlyData = data.hourlyBreakdown || _buildDemoTimeline();
+  var maxTasks   = Math.max.apply(null, hourlyData.map(function(h){ return h.tasks || 0; })) || 1;
+  var container  = document.getElementById('tl-bars');
+  var tip        = document.getElementById('tip');
+  container.innerHTML = '';
+
+  hourlyData.forEach(function(h, i) {
+    var barH   = h.type === 'future' ? 5 : Math.max(6, Math.round((h.tasks / maxTasks) * 58));
+    var col    = document.createElement('div');
+    col.className = 'tl-col';
+    col.innerHTML =
+      '<div class="tl-bar-wrap">'
+      + '<div class="tl-bar ' + h.type + '" style="height:0px" data-h="' + barH
+      + '" data-lbl="' + h.label + ': ' + (h.tasks ? h.tasks + ' tasks' : h.type === 'break' ? 'Break' : '—') + '"></div>'
+      + '</div><div class="tl-hr">' + h.label + '</div>';
+    container.appendChild(col);
+
+    if (h.isNow) {
+      var line = document.createElement('div');
+      line.className = 'tl-now';
+      line.style.left = ((i + 0.5) * (100 / hourlyData.length)) + '%';
+      line.innerHTML  = '<div class="tl-now-dot"></div>';
+      container.appendChild(line);
+    }
+  });
+
+  setTimeout(function() {
+    container.querySelectorAll('.tl-bar').forEach(function(b) {
+      b.style.height = b.dataset.h + 'px';
+      b.addEventListener('mouseenter', function(e) {
+        tip.textContent = b.dataset.lbl; tip.style.display = 'block';
+      });
+      b.addEventListener('mousemove', function(e) {
+        tip.style.left = (e.clientX + 14) + 'px';
+        tip.style.top  = (e.clientY - 34) + 'px';
+      });
+      b.addEventListener('mouseleave', function() { tip.style.display = 'none'; });
+    });
+  }, 100);
+}
+
+function _buildDemoTimeline() {
+  var now  = new Date().getHours();
+  var hrs  = ['10P','11P','12A','1A','2A','3A','4A','5A','6A','7A','8A','9A'];
+  var base = [0,1,2,3,4,5,6,7,8,9,10,11]; // index maps to hour
+  return hrs.map(function(lbl, i) {
+    if (i < base.length - 5)      return { label:lbl, type:'worked', tasks: 20+Math.floor(Math.random()*25), isNow:false };
+    if (i === base.length - 5)    return { label:lbl, type:'active', tasks: 15, isNow:true };
+    if (i === base.length - 4)    return { label:lbl, type:'break',  tasks: 0,  isNow:false };
+    return { label:lbl, type:'future', tasks:0, isNow:false };
+  });
+}
+
+// ── TASKS ────────────────────────────────────────────────
+function renderTasks(data) {
+  var byQueue = data.tasksByQueue || {};
+  var COLORS  = { 'Lane Line FP':'#2ABFBF','Lane Line QA':'#a89ef0','Lidar FP':'#F0994A','Lidar QA':'#5DC8A8' };
+  var total   = Object.values(byQueue).reduce(function(s,v){ return s+(Array.isArray(v)?v.length:v); }, 0) || 1;
+  var html    = Object.keys(COLORS).map(function(q) {
+    var cnt = Array.isArray(byQueue[q]) ? byQueue[q].length : (byQueue[q] || 0);
+    var pct = Math.round((cnt / total) * 100);
+    return '<div class="task-row">'
+      + '<div class="task-left">'
+      +   '<div class="task-dot" style="background:' + COLORS[q] + '"></div>'
+      +   '<div><div class="task-name">' + q + '</div><div class="task-queue">Queue</div></div>'
+      + '</div>'
+      + '<div style="text-align:right">'
+      +   '<div class="task-count" style="color:' + COLORS[q] + '">' + cnt + '</div>'
+      +   '<div class="task-mini" style="background:' + COLORS[q] + '22">'
+      +     '<div style="height:3px;width:' + pct + '%;background:' + COLORS[q] + ';border-radius:2px;transition:width 1s ease"></div>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  document.getElementById('tasks-card').innerHTML = html || '<p style="color:var(--txt3);text-align:center;padding:20px">No tasks submitted today</p>';
+}
+
+// ── QUALITY RING ─────────────────────────────────────────
+function renderQuality(data) {
+  var qual = data.latestQuality
+    ? parseFloat(data.latestQuality['Accuracy'] || data.latestQuality['Score'] || 0)
+    : 0;
+  var r    = 34;
+  var circ = 2 * Math.PI * r;
+  var off  = circ * (1 - qual / 100);
+  var tag  = qual >= 95 ? 'Elite performer' : qual >= 90 ? 'Top performer' : qual >= 80 ? 'On track' : 'Needs improvement';
+  var msg  = qual >= 90 ? 'You\'re above the team average. Keep it up!' : 'Keep working on accuracy to reach the top.';
+  document.getElementById('quality-card').innerHTML =
+    '<div class="q-ring-wrap">'
+    + '<svg viewBox="0 0 80 80"><circle class="q-bg" cx="40" cy="40" r="34"/>'
+    + '<circle class="q-fill" id="q-ring-fill" cx="40" cy="40" r="34"/></svg>'
+    + '<div class="q-center"><div class="q-pct">' + (qual||'—') + (qual?'%':'') + '</div><div class="q-lbl">ACCURACY</div></div>'
+    + '</div>'
+    + '<div class="q-info"><h3>' + (qual >= 90 ? 'Excellent performance' : 'Good performance') + '</h3>'
+    + '<p>' + msg + '</p><div class="q-tag">' + tag + '</div></div>';
+  setTimeout(function() {
+    var fill = document.getElementById('q-ring-fill');
+    if (fill) { fill.style.strokeDasharray = circ; fill.style.strokeDashoffset = off; }
+  }, 120);
+}
+</script>
+</body>
+</html>
