@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEEG Operations Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#1A2B5F;--teal:#2ABFBF;--teal2:#1f9a9a;
+  --bg:#07101f;--brd:rgba(255,255,255,0.1);
+  --txt:#e8edf5;--txt2:rgba(232,237,245,0.55);--txt3:rgba(232,237,245,0.3);
+}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── PARTICLES ── */
+#canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+.orb1{width:350px;height:350px;background:rgba(26,43,95,0.5);top:-100px;right:-80px}
+.orb2{width:220px;height:220px;background:rgba(42,191,191,0.08);bottom:-60px;left:-50px}
+
+/* ── LOGIN CARD ── */
+#login-screen{position:relative;z-index:10;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{
+  width:380px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:24px;padding:40px 36px 36px;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  box-shadow:0 8px 60px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.1);
+  animation:cardIn .7s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(40px) scale(.95)}to{opacity:1;transform:none}}
+
+.logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:26px}
+.logo-ring{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,var(--teal),var(--navy));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 8px rgba(42,191,191,0.1),0 0 30px rgba(42,191,191,0.3);
+  animation:pulse 3s ease-in-out infinite;margin-bottom:12px;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 8px rgba(42,191,191,0.1),0 0 30px rgba(42,191,191,0.3)}50%{box-shadow:0 0 0 14px rgba(42,191,191,0.05),0 0 50px rgba(42,191,191,0.45)}}
+.logo-txt{font-size:22px;font-weight:800;letter-spacing:2px}
+.logo-sub{font-size:10px;color:var(--txt3);letter-spacing:3px;text-transform:uppercase;margin-top:3px}
+
+.clock-pill{display:flex;align-items:center;gap:7px;background:rgba(42,191,191,0.08);border:1px solid rgba(42,191,191,0.18);border-radius:50px;padding:5px 14px;margin-bottom:24px}
+.clock-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.clock-txt{font-size:13px;color:rgba(255,255,255,.7);font-variant-numeric:tabular-nums}
+
+.field{position:relative;margin-bottom:12px}
+.field input{
+  width:100%;padding:12px 40px 12px 42px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);
+  border-radius:12px;color:var(--txt);font-size:14px;outline:none;transition:all .3s;
+}
+.field input::placeholder{color:var(--txt3)}
+.field input:focus{background:rgba(255,255,255,.11);border-color:rgba(42,191,191,.6);box-shadow:0 0 0 3px rgba(42,191,191,.1)}
+.field-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.3);font-size:16px;transition:color .3s}
+.field input:focus~.field-ico{color:var(--teal)}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:15px;padding:2px;transition:color .3s}
+.eye:hover{color:rgba(255,255,255,.7)}
+
+.login-btn{
+  width:100%;padding:13px;margin-top:6px;
+  background:linear-gradient(135deg,var(--teal),var(--teal2));
+  border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;
+  cursor:pointer;transition:all .25s;position:relative;overflow:hidden;
+}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(42,191,191,.4)}
+.login-btn:active{transform:translateY(0) scale(.98)}
+.login-btn:disabled{opacity:.6;transform:none;cursor:not-allowed}
+
+.msg{margin-top:14px;padding:9px 13px;border-radius:10px;font-size:13px;text-align:center;display:none}
+.msg.err{background:rgba(220,53,69,.13);border:1px solid rgba(220,53,69,.3);color:#ff8a8a}
+.msg.suc{background:rgba(42,191,191,.1);border:1px solid rgba(42,191,191,.3);color:var(--teal)}
+
+/* ── LOADING ── */
+#loading{display:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.spinner{width:44px;height:44px;border:3px solid rgba(42,191,191,.15);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:var(--txt2)}
+
+/* ── DASHBOARD FRAME ── */
+#dashboard-frame{display:none;width:100%;min-height:100vh}
+
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- LOADING -->
+<div id="loading" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div class="spinner"></div>
+  <div class="loading-txt" id="loading-txt">Signing in…</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="card" id="login-card">
+    <div class="logo-wrap">
+      <div class="logo-ring">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <path d="M6 10L18 4L30 10L30 26L18 32L6 26Z" stroke="#fff" stroke-width="2" fill="none" stroke-linejoin="round"/>
+          <path d="M18 4L18 32M6 10L30 10M6 26L30 26" stroke="rgba(255,255,255,0.35)" stroke-width="1.2"/>
+          <circle cx="18" cy="18" r="3" fill="#2ABFBF"/>
+        </svg>
+      </div>
+      <div class="logo-txt">MEEG</div>
+      <div class="logo-sub">Operations Dashboard</div>
+    </div>
+
+    <div class="clock-pill">
+      <div class="clock-dot"></div>
+      <div class="clock-txt" id="clock">--:--:-- --</div>
+    </div>
+
+    <div class="field">
+      <input type="email" id="inp-email" placeholder="me######@meti.ai" autocomplete="off">
+      <span class="field-ico">✉</span>
+    </div>
+    <div class="field" style="margin-bottom:18px">
+      <input type="password" id="inp-pass" placeholder="Password" onkeydown="if(event.key==='Enter') doLogin()">
+      <span class="field-ico">🔒</span>
+      <button class="eye" onclick="togglePass()" id="eye-btn">👁</button>
+    </div>
+
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Sign in →</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD (يتعبي بعد اللوجين) -->
+<div id="dashboard-frame"></div>
+
+<script>
+// ── Clock ────────────────────────────────────────────────
+(function clockTick(){
+  var el=document.getElementById('clock');
+  function t(){
+    var n=new Date(),h=n.getHours(),m=n.getMinutes(),s=n.getSeconds(),ap=h>=12?'PM':'AM';
+    h=h%12||12;
+    el.textContent=pad(h)+':'+pad(m)+':'+pad(s)+' '+ap;
+  }
+  function pad(x){return String(x).padStart(2,'0')}
+  t();setInterval(t,1000);
+})();
+
+// ── Particles canvas ────────────────────────────────────
+(function particles(){
+  var c=document.getElementById('canvas');
+  var ctx=c.getContext('2d');
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+  resize();window.addEventListener('resize',resize);
+  var pts=Array.from({length:50},function(){return{
+    x:Math.random()*c.width,y:Math.random()*c.height,
+    vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.4
+  }});
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(function(p){
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>c.width)p.vx*=-1;
+      if(p.y<0||p.y>c.height)p.vy*=-1;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(42,191,191,0.5)';ctx.fill();
+    });
+    for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
+      var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<110){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+        ctx.strokeStyle='rgba(42,191,191,'+(1-d/110)*.15+')';ctx.lineWidth=.6;ctx.stroke()}
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Toggle password ─────────────────────────────────────
+function togglePass(){
+  var inp=document.getElementById('inp-pass');
+  inp.type=inp.type==='password'?'text':'password';
+}
+
+// ── Show message ─────────────────────────────────────────
+function showMsg(txt,type){
+  var el=document.getElementById('msg');
+  el.textContent=txt;el.className='msg '+type;el.style.display='block';
+}
+
+// ── Shake card ──────────────────────────────────────────
+function shakeCard(){
+  var c=document.getElementById('login-card');
+  c.style.animation='none';c.offsetHeight;c.style.animation='shake .4s ease';
+}
+
+// ── MAIN LOGIN ───────────────────────────────────────────
+function doLogin(){
+  var email = document.getElementById('inp-email').value.trim();
+  var pass  = document.getElementById('inp-pass').value;
+  var btn   = document.getElementById('login-btn');
+
+  if(!email || !pass){ showMsg('Please fill in all fields','err'); return; }
+
+  btn.disabled=true; btn.textContent='Signing in…';
+  document.getElementById('loading').style.display='flex';
+
+  // استدعاء الـ Apps Script backend
+  google.script.run
+    .withSuccessHandler(function(result){
+      document.getElementById('loading').style.display='none';
+      btn.disabled=false; btn.textContent='Sign in →';
+
+      if(result && result.success){
+        // حفظ الـ session
+        window._session = result;
+        showMsg('Welcome back, '+result.name+' 👋','suc');
+        document.getElementById('loading-txt').textContent='Loading your dashboard…';
+        document.getElementById('loading').style.display='flex';
+
+        // بعد ثانية، حمّل الـ dashboard المناسب
+        setTimeout(function(){ loadDashboard(result); }, 900);
+      } else {
+        showMsg(result.error || 'Invalid email or password','err');
+        shakeCard();
+        document.getElementById('inp-pass').value='';
+      }
+    })
+    .withFailureHandler(function(err){
+      document.getElementById('loading').style.display='none';
+      btn.disabled=false; btn.textContent='Sign in →';
+      showMsg('Connection error: '+err.message,'err');
+      shakeCard();
+    })
+    .loginUser(email, pass);
+}
+
+// ── LOAD DASHBOARD حسب الـ role ──────────────────────────
+function loadDashboard(session){
+  var roleMap = {
+    'Labeler'              : 'Labeler',
+    'Floor Supervisor'     : 'FloorSupervisor',
+    'Shift Supervisor'     : 'ShiftSupervisor',
+    'QA & Training'        : 'QA',
+    'Workload Manager'     : 'WorkloadManager',
+    'Admin'                : 'Admin',
+  };
+  var view = roleMap[session.role] || 'Labeler';
+
+  google.script.run
+    .withSuccessHandler(function(html){
+      document.getElementById('loading').style.display='none';
+      document.getElementById('login-screen').style.display='none';
+      var frame = document.getElementById('dashboard-frame');
+      frame.style.display='block';
+      frame.innerHTML=html;
+
+      // inject session في الـ dashboard
+      if(window.initDashboard) window.initDashboard(session);
+    })
+    .withFailureHandler(function(err){
+      document.getElementById('loading').style.display='none';
+      showMsg('Failed to load dashboard','err');
+    })
+    .getDashboardHtml(view, session);
+}
+</script>
+</body>
+</html>
