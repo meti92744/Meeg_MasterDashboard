@@ -251,11 +251,23 @@ function startAutoRefresh(){
 // ── API call ─────────────────────────────────────────────
 async function api(action, params){
   var body = Object.assign({ action: action, session: SESSION }, params||{});
-  var res = await fetch(APPS_URL, {
-    method:'POST', headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify(body)
-  });
-  return res.json();
+  try {
+    var res = await fetch(APPS_URL, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'text/plain' },
+      redirect: 'follow',
+      body    : JSON.stringify(body)
+    });
+    var text = await res.text();
+    try { return JSON.parse(text); }
+    catch(e) {
+      console.error('Non-JSON response:', text.substring(0,200));
+      return { error: 'Invalid response from server' };
+    }
+  } catch(err) {
+    console.error('API error:', err);
+    return { error: 'Connection failed: ' + err.message };
+  }
 }
 
 // ── TODAY string ─────────────────────────────────────────
